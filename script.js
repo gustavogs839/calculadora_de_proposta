@@ -161,10 +161,10 @@ const addRow = () => {
   parcelasTableBody.appendChild(row);
 };
 
-const updateEntrada = () => {
+const updateEntrada = (source = 'percent') => {
   const rawValorTotal = valorTotalEl.dataset.raw ?? valorTotalEl.value;
   const valorTotal = parseCurrency(rawValorTotal) || 0;
-  const percentual = Number(percentualEntradaEl.value) || 0;
+  let percentual = Number(percentualEntradaEl.value) || 0;
   const percentualImobiliaria = Number(percentualImobiliariaEl.value) || 0;
   const percentualConstrutora = Number(percentualConstrutoraEl.value) || 0;
 
@@ -172,11 +172,21 @@ const updateEntrada = () => {
   const percentualAto = percentualImobiliaria + percentualConstrutora;
   percentualAtoEl.value = Number(percentualAto).toFixed(2);
 
-  const valorEntrada = (valorTotal * percentual) / 100;
+  let valorEntrada = 0;
+  if (source === 'valor') {
+    valorEntrada = parseCurrency(valorEntradaEl.dataset.raw ?? valorEntradaEl.value) || 0;
+    percentual = valorTotal > 0 ? (valorEntrada / valorTotal) * 100 : 0;
+    percentualEntradaEl.value = Number(percentual).toFixed(2);
+  } else {
+    valorEntrada = (valorTotal * percentual) / 100;
+  }
+
   const valorAto = (valorTotal * percentualAto) / 100;
 
-  // show formatted
-  valorEntradaEl.value = formatCurrency(valorEntrada);
+  if (document.activeElement !== valorEntradaEl) {
+    valorEntradaEl.dataset.raw = String(valorEntrada);
+    valorEntradaEl.value = formatCurrency(valorEntrada);
+  }
   if (document.activeElement !== valorTotalEl) {
     valorTotalEl.value = formatCurrency(valorTotal);
   }
@@ -194,6 +204,30 @@ const updateEntrada = () => {
 
   return { valorEntrada, valorAto };
 };
+
+percentualEntradaEl.addEventListener('input', () => {
+  updateEntrada('percent');
+});
+
+percentualEntradaEl.addEventListener('blur', () => {
+  percentualEntradaEl.value = Number(percentualEntradaEl.value || 0).toFixed(2);
+  updateEntrada('percent');
+});
+
+valorEntradaEl.addEventListener('focus', () => {
+  valorEntradaEl.value = valorEntradaEl.dataset.raw ?? (valorEntradaEl.value ? String(parseCurrency(valorEntradaEl.value)) : '0');
+});
+
+valorEntradaEl.addEventListener('input', () => {
+  valorEntradaEl.dataset.raw = valorEntradaEl.value.replace(/[^0-9,.-]+/g, '');
+  updateEntrada('valor');
+});
+
+valorEntradaEl.addEventListener('blur', () => {
+  valorEntradaEl.dataset.raw = valorEntradaEl.value;
+  valorEntradaEl.value = formatCurrency(parseCurrency(valorEntradaEl.value));
+  updateEntrada('valor');
+});
 
 // format valorTotal on focus/blur like other currency fields
 valorTotalEl.addEventListener('focus', () => {
