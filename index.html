@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Proposta</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Calculadora de Proposta</h1>
+      <p>Simule condições e gere a proposta em PDF.</p>
+    </header>
+
+    <section class="card">
+      <h2>Dados do Empreendimento</h2>
+      <div class="grid">
+        <label>
+          Empreendimento
+          <input id="empreendimento" type="text" value="" />
+        </label>
+        <label>
+          Unidade
+          <input id="unidade" type="text" value="" />
+        </label>
+        <label>
+          Valor do imóvel
+          <input id="valorTotal" type="text" class="currency" value="R$ 0,00" />
+        </label>
+        <label>
+          % Entrada
+          <input id="percentualEntrada" type="number" step="0.01" value="0" />
+        </label>
+        <label>
+          % Ato
+          <input id="percentualAto" type="number" step="0.01" value="0" readonly />
+        </label>
+        <label>
+          % Imobiliária
+          <input id="percentualImobiliaria" type="number" step="0.01" value="5" />
+        </label>
+        <label>
+          % Construtora
+          <input id="percentualConstrutora" type="number" step="0.01" value="3" />
+        </label>
+        <label>
+          Valor Imobiliária
+          <input id="valorImobiliaria" type="text" readonly value="R$ 0,00" />
+        </label>
+        <label>
+          Valor Construtora
+          <input id="valorConstrutora" type="text" readonly value="R$ 0,00" />
+        </label>
+        <label>
+          Valor Entrada
+          <input id="valorEntrada" type="text" readonly value="R$ 0,00" />
+        </label>
+        <label>
+          Valor Ato
+          <input id="valorAto" type="text" readonly value="R$ 0,00" />
+        </label>
+        <label>
+          HABITE-SE
+          <input id="habiteSe" type="text" readonly value="R$ 0,00" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Parcelas e Programação</h2>
+      <div class="table-wrapper">
+        <table id="parcelasTable">
+          <thead>
+            <tr>
+              <th>Data de Vencimento</th>
+              <th>Periodicidade</th>
+              <th>Nº de parcelas</th>
+              <th>Valor unitário nesta data</th>
+              <th>Valor total da série</th>
+              <th>Obs</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="button-row">
+        <button id="addRow">Adicionar linha</button>
+        <button id="calculateSuggestionBtn">Calcular</button>
+      </div>
+    </section>
+
+    <section class="card summary-card">
+      <h2>Resumo da Proposta</h2>
+      <div class="summary-item">
+        <span>Total de entrada</span>
+        <strong id="totalEntrada">R$ 0,00</strong>
+      </div>
+      <div class="summary-item">
+        <span>Valor Ato</span>
+        <strong id="valorAtoResumo">R$ 0,00</strong>
+      </div>
+      <div class="summary-item">
+        <span>Total da programação</span>
+        <strong id="totalParcelas">R$ 0,00</strong>
+      </div>
+      <div class="summary-item">
+        <span>Saldo para bater entrada</span>
+        <strong id="saldoEntrada">R$ 0,00</strong>
+      </div>
+      <div class="summary-item">
+        <span>Valor a ser financiado</span>
+        <strong id="valorFinal">R$ 0,00</strong>
+      </div>
+      <div class="button-row">
+        <button id="calcularBtn">Calcular Proposta</button>
+        <button id="exportPdfBtn">Gerar PDF</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
