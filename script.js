@@ -21,6 +21,7 @@ const totalParcelasEl = document.getElementById('totalParcelas');
 const saldoEntradaEl = document.getElementById('saldoEntrada');
 const valorFinalEl = document.getElementById('valorFinal');
 
+// utils: format/parse currency (moved up to avoid TDZ errors)
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -58,6 +59,256 @@ const parseCurrency = (str) => {
   return isNaN(n) ? 0 : n;
 };
 
+// Abas (tabs) e simulador
+const tabButtons = document.querySelectorAll('.tab');
+const propostaTabEl = document.getElementById('propostaTab');
+const simuladorTabEl = document.getElementById('simuladorTab');
+const simCalculateBtn = document.getElementById('simCalculate');
+const simApplyBtn = document.getElementById('simApply');
+const simTotalEl = document.getElementById('simTotal');
+const modelSelect = document.getElementById('modelSelect');
+const modelNameEl = document.getElementById('modelName');
+const modelAreaEl = document.getElementById('modelArea');
+
+let MODELS = [];
+
+const loadModels = async () => {
+  try {
+    const res = await fetch('data/models.json');
+    MODELS = await res.json();
+    // populate select
+    modelSelect.innerHTML = '';
+    MODELS.forEach((m, i) => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      modelSelect.appendChild(opt);
+      if (i === 0) {
+        // set initial
+        applyModel(m);
+      }
+    });
+    modelSelect.addEventListener('change', () => {
+      const id = modelSelect.value;
+      const m = MODELS.find(x => x.id === id);
+      if (m) applyModel(m);
+    });
+  } catch (e) {
+    console.error('Erro ao carregar models.json', e);
+  }
+};
+
+const SIM_ROW_KEYS = ['sinal', '306090', 'mensais', 'semestrais', 'unica', 'financiamento'];
+
+const applyModel = (m) => {
+  const title = m.name.replace(m.area, '').trim();
+  modelNameEl.textContent = title;
+  modelAreaEl.textContent = m.area;
+  // update banner image (falls back to a placeholder icon if the asset is missing/broken)
+  const bannerRight = document.querySelector('.sim-banner-right');
+  if (bannerRight) {
+    bannerRight.style.backgroundImage = '';
+    bannerRight.classList.remove('placeholder');
+    const probe = new Image();
+    probe.onload = () => {
+      bannerRight.style.backgroundImage = `url('${m.image}')`;
+    };
+    probe.onerror = () => {
+      bannerRight.classList.add('placeholder');
+    };
+    probe.src = m.image;
+  }
+  // set fixed price target
+  valorTotalEl.dataset.raw = String(m.price);
+  valorTotalEl.value = formatCurrency(m.price);
+
+  // populate simulator rows with this model's breakdown
+  if (m.breakdown) {
+    SIM_ROW_KEYS.forEach((key) => {
+      const data = m.breakdown[key];
+      const row = document.querySelector(`#simuladorTab tbody tr[data-key="${key}"]`);
+      if (!data || !row) return;
+      const qtyEl = row.querySelector('.sim-qty');
+      const unitEl = row.querySelector('.sim-unit');
+      qtyEl.value = data.qty;
+      unitEl.value = formatCurrency(data.unit);
+      unitEl.dataset.raw = String(data.unit);
+    });
+    updateSimTotals();
+  }
+};
+
+tabButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    tabButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.dataset.target;
+    if (target === 'propostaTab') {
+      propostaTabEl.style.display = '';
+      simuladorTabEl.style.display = 'none';
+    } else {
+      propostaTabEl.style.display = 'none';
+      simuladorTabEl.style.display = '';
+    }
+  });
+});
+
+const updateSimTotals = () => {
+  const rows = Array.from(document.querySelectorAll('#simuladorTab tbody tr'));
+  let grandTotal = 0;
+  rows.forEach((row) => {
+    const qtyEl = row.querySelector('.sim-qty');
+    const unitEl = row.querySelector('.sim-unit');
+    const totalEl = row.querySelector('.sim-total');
+    const qty = Number(qtyEl.value) || 0;
+    const unit = parseCurrency(unitEl.value || unitEl.dataset.raw || unitEl.textContent) || 0;
+    const series = qty * unit;
+    totalEl.value = formatCurrency(series);
+    totalEl.dataset.raw = String(series);
+    unitEl.dataset.raw = String(unit);
+    grandTotal += series;
+  });
+  simTotalEl.textContent = formatCurrency(grandTotal);
+  return grandTotal;
+};
+
+// wire up simulator inputs: format on focus/blur and recalc on change
+document.querySelectorAll('#simuladorTab .sim-unit').forEach((el) => {
+  el.addEventListener('focus', () => {
+    el.value = el.dataset.raw ?? (el.value ? String(parseCurrency(el.value)) : '0');
+  });
+  el.addEventListener('blur', () => {
+    el.dataset.raw = el.value.replace(/[^0-9,.-]+/g, '');
+    el.value = formatCurrency(parseCurrency(el.value));
+    updateSimTotals();
+  });
+});
+document.querySelectorAll('#simuladorTab .sim-qty').forEach((el) => {
+  el.addEventListener('input', () => updateSimTotals());
+});
+
+if (simCalculateBtn) simCalculateBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  console.log('simCalculate clicked');
+  const grandTotal = updateSimTotals();
+
+  // ajusta a soma do simulador para bater com o Valor do Imóvel do modelo selecionado
+  const target = parseCurrency(valorTotalEl.dataset.raw ?? valorTotalEl.value) || 0;
+  if (target > 0) {
+    const diff = Math.round((target - grandTotal) * 100) / 100;
+    if (Math.abs(diff) >= 0.01) {
+      const rows = Array.from(document.querySelectorAll('#simuladorTab tbody tr'));
+      if (rows.length) {
+        // preferir ajustar em ordem: mensais, sinal, 306090, semestrais, unica, financiamento
+        const preference = ['mensais', 'sinal', '306090', 'semestrais', 'unica', 'financiamento'];
+        let targetRow = null;
+        for (const key of preference) {
+          const r = document.querySelector(`#simuladorTab tbody tr[data-key="${key}"]`);
+          if (r) { targetRow = r; break; }
+        }
+        if (!targetRow) {
+          // fallback: last adjustable row (has editable .sim-unit)
+          targetRow = rows.slice().reverse().find(r => r.querySelector('.sim-unit') && !r.querySelector('.sim-unit').hasAttribute('readonly')) || rows[rows.length - 1];
+        }
+
+        const qtyEl = targetRow.querySelector('.sim-qty');
+        const unitEl = targetRow.querySelector('.sim-unit');
+        const totalEl = targetRow.querySelector('.sim-total');
+        const qty = Number(qtyEl.value) || 1;
+        const currentSeries = parseCurrency(totalEl.value) || 0;
+
+        let updatedSeries = Math.round((currentSeries + diff) * 100) / 100;
+        // don't allow negative series; if would be negative, try next candidate
+        if (updatedSeries < 0) {
+          // try other adjustable rows
+          const other = rows.filter(r => r !== targetRow);
+          let applied = false;
+          // distribuir diff proporcionalmente entre as linhas ajustáveis como fallback
+          const adjustable = other.filter(r => r.querySelector('.sim-unit'));
+          const totalAdjustable = adjustable.reduce((acc, r) => acc + (parseCurrency(r.querySelector('.sim-total').value) || 0), 0) || adjustable.length;
+          if (adjustable.length) {
+            adjustable.forEach((r) => {
+              const qty2 = Number(r.querySelector('.sim-qty').value) || 1;
+              const current2 = parseCurrency(r.querySelector('.sim-total').value) || 0;
+              // share by current proportion, fallback to even
+              const share = totalAdjustable > 0 ? (current2 / totalAdjustable) : (1 / adjustable.length);
+              const updated2 = Math.max(0, Math.round((current2 + diff * share) * 100) / 100);
+              r.querySelector('.sim-total').value = formatCurrency(updated2);
+              r.querySelector('.sim-total').dataset.raw = String(updated2);
+              r.querySelector('.sim-unit').value = formatCurrency(Math.round((updated2 / qty2) * 100) / 100);
+              r.classList.add('adjusted');
+              setTimeout(() => r.classList.remove('adjusted'), 1200);
+            });
+            applied = true;
+          }
+          if (!applied) {
+            updatedSeries = 0;
+          }
+        }
+
+        // Apply to selected row (clamp at zero)
+        updatedSeries = Math.max(0, Math.round(updatedSeries * 100) / 100);
+        const updatedUnit = qty > 0 ? Math.round((updatedSeries / qty) * 100) / 100 : 0;
+        totalEl.value = formatCurrency(updatedSeries);
+        totalEl.dataset.raw = String(updatedSeries);
+        unitEl.value = formatCurrency(updatedUnit);
+        unitEl.dataset.raw = String(updatedUnit);
+        targetRow.classList.add('adjusted');
+        setTimeout(() => targetRow.classList.remove('adjusted'), 1200);
+
+        // recalcula e atualiza exibição
+        updateSimTotals();
+      }
+    }
+  }
+});
+const SIM_ROW_LABELS = {
+  sinal: 'Sinal',
+  '306090': '30/60/90',
+  mensais: 'Mensal',
+  semestrais: 'Semestral',
+  unica: 'Única',
+  financiamento: 'Financiamento',
+};
+
+if (simApplyBtn) simApplyBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  const total = updateSimTotals();
+  // apply to valor do imóvel
+  valorTotalEl.dataset.raw = String(total);
+  valorTotalEl.value = formatCurrency(total);
+
+  // recria a Programação de Pagamentos a partir do simulador
+  parcelasTableBody.innerHTML = '';
+  SIM_ROW_KEYS.forEach((key) => {
+    const row = document.querySelector(`#simuladorTab tbody tr[data-key="${key}"]`);
+    if (!row) return;
+    const qty = Number(row.querySelector('.sim-qty').value) || 0;
+    if (qty <= 0) return;
+    const unit = parseCurrency(row.querySelector('.sim-unit').value) || 0;
+    const serie = parseCurrency(row.querySelector('.sim-total').value) || unit * qty;
+    addRow({
+      periodicidade: SIM_ROW_LABELS[key] || key,
+      parcelas: qty,
+      valorUnitario: unit,
+      valorSerie: serie,
+    });
+  });
+
+  updateEntrada();
+  calculateProposal();
+  // switch to proposta tab
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.querySelector('.tab[data-target="propostaTab"]').classList.add('active');
+  propostaTabEl.style.display = '';
+  simuladorTabEl.style.display = 'none';
+});
+
+// inicializa valores do simulador
+updateSimTotals();
+// carregar modelos
+loadModels();
+
 const createCell = (tag, content = '', className = '') => {
   const cell = document.createElement(tag);
   if (className) cell.className = className;
@@ -69,33 +320,48 @@ const createCell = (tag, content = '', className = '') => {
   return cell;
 };
 
-const addRow = () => {
+const PERIODICIDADE_OPTIONS = ['Sinal', '30/60/90', 'Mensal', 'Semestral', 'Única', 'Financiamento', 'Ato Imobiliária', 'Ato Construtora'];
+
+const addRow = (initial = {}) => {
   const row = document.createElement('tr');
   const dateInput = document.createElement('input');
   dateInput.type = 'month';
+  if (initial.data) dateInput.value = initial.data;
+
   const periodicidadeInput = document.createElement('select');
-  ['Mensal', 'Semestral', 'Única', 'Ato Imobiliária', 'Ato Construtora'].forEach((optionText) => {
+  PERIODICIDADE_OPTIONS.forEach((optionText) => {
     const option = document.createElement('option');
     option.value = optionText;
     option.textContent = optionText;
     periodicidadeInput.appendChild(option);
   });
+  if (initial.periodicidade) periodicidadeInput.value = initial.periodicidade;
+
+  const parcelas = initial.parcelas ?? 1;
   const parcelasInput = document.createElement('input');
   parcelasInput.type = 'number';
   parcelasInput.min = '1';
-  parcelasInput.value = '1';
+  parcelasInput.value = String(parcelas);
+
+  const unit = initial.valorUnitario ?? 0;
   const valorUnitarioInput = document.createElement('input');
   valorUnitarioInput.type = 'text';
   valorUnitarioInput.className = 'currency';
-  valorUnitarioInput.value = formatCurrency(0);
+  valorUnitarioInput.value = formatCurrency(unit);
+  valorUnitarioInput.dataset.raw = String(unit);
+
+  const serie = initial.valorSerie ?? unit * parcelas;
   const valorSerieInput = document.createElement('input');
   valorSerieInput.type = 'text';
   valorSerieInput.className = 'currency';
-  valorSerieInput.value = formatCurrency(0);
+  valorSerieInput.value = formatCurrency(serie);
+  valorSerieInput.dataset.raw = String(serie);
+
   const obsInput = document.createElement('input');
   obsInput.type = 'text';
   obsInput.className = 'obs';
   obsInput.placeholder = 'Observação (opcional)';
+  if (initial.obs) obsInput.value = initial.obs;
   const removeButton = document.createElement('button');
   removeButton.type = 'button';
   removeButton.textContent = 'Remover';
@@ -387,90 +653,144 @@ const exportPdf = async () => {
   const margin = 40;
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  let y = 50;
+  const contentBottom = pageHeight - 56; // reserva espaço pro rodapé
+  const NAVY = [15, 23, 42];
+  const ACCENT = [29, 78, 216];
+  const MUTED = [102, 112, 133];
+  const BORDER = [228, 231, 236];
+  const ZEBRA = [248, 250, 252];
+  let y = 0;
 
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(18);
-  pdf.text('Proposta Comercial', margin, y);
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, pageWidth - margin, y, { align: 'right' });
-  y += 14;
-  pdf.setDrawColor(220);
-  pdf.setLineWidth(1);
-  pdf.line(margin, y, pageWidth - margin, y);
-  y += 24;
+  const ensureSpace = (needed) => {
+    if (y + needed > contentBottom) {
+      pdf.addPage();
+      y = 50;
+      return true;
+    }
+    return false;
+  };
 
+  // faixa de cabeçalho
+  pdf.setFillColor(...NAVY);
+  pdf.rect(0, 0, pageWidth, 76, 'F');
+  pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(12);
-  pdf.text('Dados do Empreendimento', margin, y);
-  y += 18;
+  pdf.setFontSize(19);
+  pdf.text('Proposta Comercial', margin, 34);
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(203, 213, 225);
+  pdf.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, margin, 52);
+  if (proposal.empreendimento) {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(proposal.empreendimento, pageWidth - margin, 34, { align: 'right' });
+  }
+  if (proposal.unidade) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(203, 213, 225);
+    pdf.text(`Unidade ${proposal.unidade}`, pageWidth - margin, 52, { align: 'right' });
+  }
+  pdf.setTextColor(0, 0, 0);
+  y = 106;
+
+  const sectionTitle = (title) => {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.setTextColor(...NAVY);
+    pdf.text(title, margin, y);
+    y += 10;
+    pdf.setDrawColor(...BORDER);
+    pdf.setLineWidth(1);
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 22;
+    pdf.setTextColor(0, 0, 0);
+  };
+
+  sectionTitle('Condições Financeiras');
 
   const infoRows = [
-    ['Empreendimento', proposal.empreendimento],
-    ['Unidade', proposal.unidade],
     ['Valor do imóvel', proposal.valorTotal],
-    ['Entrada', proposal.valorEntrada],
-    ['Valor a ser financiado', proposal.valorFinal],
+    ['% Entrada', proposal.percentualEntrada],
+    ['Valor de entrada', proposal.valorEntrada],
+    ['Total da programação de pagamentos', proposal.totalParcelas],
   ];
 
+  pdf.setFontSize(10);
   infoRows.forEach(([label, value]) => {
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(label, margin, y);
     pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(...MUTED);
+    pdf.text(label, margin, y);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(...NAVY);
     pdf.text(value, pageWidth - margin, y, { align: 'right' });
     y += 18;
   });
 
-  y += 14;
-  pdf.setDrawColor(220);
-  pdf.setLineWidth(1);
-  pdf.line(margin, y, pageWidth - margin, y);
-  y += 24;
-
+  // destaque do valor a financiar
+  y += 6;
+  pdf.setFillColor(...ACCENT);
+  pdf.roundedRect(margin, y, pageWidth - margin * 2, 34, 6, 6, 'F');
+  pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(12);
-  pdf.text('Programação de Pagamentos', margin, y);
-  y += 18;
+  pdf.setFontSize(10.5);
+  pdf.text('Valor a ser financiado', margin + 12, y + 22);
+  pdf.setFontSize(13);
+  pdf.text(proposal.valorFinal, pageWidth - margin - 12, y + 22, { align: 'right' });
+  pdf.setTextColor(0, 0, 0);
+  y += 34 + 32;
+
+  sectionTitle('Programação de Pagamentos');
 
   const tableHeaders = ['Data', 'Periodicidade', 'Parcelas', 'Valor Unit.', 'Total da Série', 'Obs'];
   const columnWidths = [60, 110, 50, 90, 90, 105];
-  const rowHeight = 18;
+  const numericCols = [2, 3, 4];
+  const rowHeight = 20;
+  const textInset = 14; // distância da linha de base do texto até o topo da linha
   const tableX = margin;
+  const tableWidth = columnWidths.reduce((a, b) => a + b, 0);
 
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
-  let x = tableX;
-  tableHeaders.forEach((header, index) => {
-    pdf.text(header, x + 2, y);
-    x += columnWidths[index];
-  });
-  y += rowHeight;
+  const drawTableRow = (values, { bold = false, muted = false, fill = null } = {}) => {
+    const rowTop = y;
+    if (fill) {
+      pdf.setFillColor(...fill);
+      pdf.rect(tableX, rowTop, tableWidth, rowHeight, 'F');
+    }
+    pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+    pdf.setFontSize(bold ? 9 : 9.5);
+    pdf.setTextColor(...(muted ? MUTED : bold ? NAVY : [17, 24, 39]));
+    const textY = rowTop + textInset;
+    let x = tableX;
+    values.forEach((value, index) => {
+      const text = value.toString();
+      if (numericCols.includes(index)) {
+        pdf.text(text, x + columnWidths[index] - 4, textY, { align: 'right' });
+      } else {
+        pdf.text(text, x + 4, textY);
+      }
+      x += columnWidths[index];
+    });
+    pdf.setTextColor(0, 0, 0);
+    y = rowTop + rowHeight;
+    pdf.setDrawColor(...BORDER);
+    pdf.setLineWidth(bold ? 0.8 : 0.5);
+    pdf.line(tableX, y, tableX + tableWidth, y);
+  };
 
-  pdf.setDrawColor(220);
-  pdf.setLineWidth(0.4);
-  pdf.line(tableX, y - rowHeight + 4, pageWidth - margin, y - rowHeight + 4);
-  pdf.line(tableX, y - rowHeight + 4, tableX, y - 4);
-  pdf.line(pageWidth - margin, y - rowHeight + 4, pageWidth - margin, y - 4);
+  const drawTableHeader = () => {
+    drawTableRow(tableHeaders, { bold: true, muted: true, fill: ZEBRA });
+  };
 
-  pdf.setFont('helvetica', 'normal');
-  proposal.payments.forEach((payment) => {
-    if (y > pageHeight - 60) {
-      pdf.addPage();
-      y = 50;
-      pdf.setFont('helvetica', 'bold');
-      x = tableX;
-      tableHeaders.forEach((header, index) => {
-        pdf.text(header, x + 2, y);
-        x += columnWidths[index];
-      });
-      y += rowHeight;
-      pdf.setFont('helvetica', 'normal');
+  ensureSpace(rowHeight * 2);
+  drawTableHeader();
+
+  proposal.payments.forEach((payment, rowIndex) => {
+    if (ensureSpace(rowHeight)) {
+      drawTableHeader();
     }
 
-    x = tableX;
     const rowValues = [
       payment.data,
       payment.periodicidade,
@@ -480,26 +800,45 @@ const exportPdf = async () => {
       payment.observacao,
     ];
 
-    rowValues.forEach((value, index) => {
-      const text = value.toString();
-      const alignRight = index >= 2 && index <= 4;
-      if (alignRight) {
-        pdf.text(text, x + columnWidths[index] - 4, y, { align: 'right' });
-      } else {
-        pdf.text(text, x + 2, y);
-      }
-      x += columnWidths[index];
-    });
-    y += rowHeight;
-    pdf.line(tableX, y - 4, pageWidth - margin, y - 4);
-    pdf.line(tableX, y - rowHeight + 4, tableX, y - 4);
-    pdf.line(pageWidth - margin, y - rowHeight + 4, pageWidth - margin, y - 4);
+    drawTableRow(rowValues, { fill: rowIndex % 2 === 1 ? ZEBRA : null });
   });
 
-  y += 20;
+  // linha de total
+  ensureSpace(rowHeight + 4);
+  drawTableRow(['Total', '', '', '', proposal.totalParcelas, ''], { bold: true });
+
+  // observações
+  y += 26;
+  ensureSpace(90);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
+  pdf.setFontSize(11);
+  pdf.setTextColor(...NAVY);
   pdf.text('Observações', margin, y);
+  pdf.setTextColor(0, 0, 0);
+  y += 12;
+  const notesHeight = 64;
+  pdf.setDrawColor(...BORDER);
+  pdf.setLineWidth(0.8);
+  pdf.roundedRect(margin, y, pageWidth - margin * 2, notesHeight, 6, 6);
+  pdf.setDrawColor(240, 242, 246);
+  for (let lineY = y + 22; lineY < y + notesHeight; lineY += 22) {
+    pdf.line(margin + 8, lineY, pageWidth - margin - 8, lineY);
+  }
+
+  // rodapé com numeração de página
+  const pageCount = pdf.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i += 1) {
+    pdf.setPage(i);
+    pdf.setDrawColor(...BORDER);
+    pdf.setLineWidth(0.6);
+    pdf.line(margin, pageHeight - 36, pageWidth - margin, pageHeight - 36);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(...MUTED);
+    pdf.text('Calculadora de Proposta', margin, pageHeight - 22);
+    pdf.text(`Página ${i} de ${pageCount}`, pageWidth - margin, pageHeight - 22, { align: 'right' });
+    pdf.setTextColor(0, 0, 0);
+  }
 
   pdf.save('proposta.pdf');
 };
@@ -509,7 +848,7 @@ percentualImobiliariaEl.addEventListener('input', updateEntrada);
 percentualConstrutoraEl.addEventListener('input', updateEntrada);
 empreendimentoEl.addEventListener('input', updateEntrada);
 unidadeEl.addEventListener('input', updateEntrada);
-calcularBtn.addEventListener('click', calculateProposal);
+calcularBtn.addEventListener('click', (e) => { console.log('calcularBtn clicked'); calculateProposal(e); });
 addRowBtn.addEventListener('click', () => {
   addRow();
   calculateProposal();

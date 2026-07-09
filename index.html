@@ -13,8 +13,17 @@
       <h1>Calculadora de Proposta</h1>
       <p>Simule condições e gere a proposta em PDF.</p>
     </header>
+      <div class="tabs">
+      <button type="button" class="tab active" data-target="propostaTab">Proposta</button>
+      <button type="button" class="tab" data-target="simuladorTab">Simulador</button>
+    </div>
+      <div class="model-select">
+        <label for="modelSelect">Modelo:</label>
+        <select id="modelSelect"></select>
+      </div>
 
-    <section class="card">
+      <div id="propostaTab">
+      <section class="card">
       <h2>Dados do Empreendimento</h2>
       <div class="grid">
         <label>
@@ -27,7 +36,7 @@
         </label>
         <label>
           Valor do imóvel
-          <input id="valorTotal" type="text" class="currency" value="R$ 0,00" />
+          <input id="valorTotal" type="text" class="currency" value="R$ 310.000,00" readonly />
         </label>
         <label>
           % Entrada
@@ -119,6 +128,81 @@
         <button id="exportPdfBtn">Gerar PDF</button>
       </div>
     </section>
+    </div>
+
+    <div id="simuladorTab" class="card" style="display:none;">
+      <div class="sim-banner">
+        <div class="sim-banner-left">
+          <div class="sim-label">Simulador</div>
+            <div class="sim-name"><span id="modelName">ICOON1Q</span> <span id="modelArea">32M²</span></div>
+        </div>
+        <div class="sim-banner-right"></div>
+      </div>
+      <h2>Simulador de Pagamentos</h2>
+      <p>Altere quantidades e valores unitários; o total será calculado exatamente.</p>
+      <div class="sim-grid">
+        <table class="sim-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Quantidade</th>
+              <th>Valor unit.</th>
+              <th>Total da série</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-key="sinal">
+              <td>Sinal (ato)</td>
+              <td><input type="number" class="sim-qty" value="1" min="0"></td>
+              <td><input type="text" class="sim-unit currency" value="R$ 12400,00"></td>
+              <td><input type="text" class="sim-total currency" readonly value="R$ 12.400,00"></td>
+            </tr>
+            <tr data-key="306090">
+              <td>30/60/90</td>
+              <td><input type="number" class="sim-qty" value="3" min="0"></td>
+              <td><input type="text" class="sim-unit currency" value="R$ 6200,00"></td>
+              <td><input type="text" class="sim-total currency" readonly value="R$ 18.600,00"></td>
+            </tr>
+            <tr data-key="mensais">
+              <td>Mensais</td>
+              <td><input type="number" class="sim-qty" value="44" min="0"></td>
+              <td><input type="text" class="sim-unit currency" value="R$ 564,00"></td>
+              <td><input type="text" class="sim-total currency" readonly value="R$ 24.816,00"></td>
+            </tr>
+            <tr data-key="semestrais">
+              <td>Semestrais</td>
+              <td><input type="number" class="sim-qty" value="7" min="0"></td>
+              <td><input type="text" class="sim-unit currency" value="R$ 3.543,00"></td>
+              <td><input type="text" class="sim-total currency" readonly value="R$ 24.801,00"></td>
+            </tr>
+            <tr data-key="unica">
+              <td>Única</td>
+              <td><input type="number" class="sim-qty" value="1" min="0"></td>
+              <td><input type="text" class="sim-unit currency" value="R$ 24.800,00"></td>
+              <td><input type="text" class="sim-total currency" readonly value="R$ 24.800,00"></td>
+            </tr>
+            <tr data-key="financiamento">
+              <td>Financiamento</td>
+              <td><input type="number" class="sim-qty" value="1" min="0"></td>
+              <td><input type="text" class="sim-unit currency" value="R$ 204.583,00"></td>
+              <td><input type="text" class="sim-total currency" readonly value="R$ 204.583,00"></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="sim-summary">
+          <div class="summary-item">
+            <span>Total do Simulador</span>
+            <strong id="simTotal">R$ 310.000,00</strong>
+          </div>
+          <div class="button-row">
+            <button type="button" id="simCalculate">Calcular Total</button>
+            <button type="button" id="simApply">Aplicar ao Valor do Imóvel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="script.js"></script>

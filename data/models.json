@@ -1,0 +1,130 @@
+[
+  {
+    "id": "ICOON1Q-32M",
+    "name": "ICOON 1Q 32M²",
+    "area": "32M²",
+    "price": 310000,
+    "image": "assets/planta.png",
+    "fieldsEditable": ["sinal", "306090", "mensais", "semestrais", "unica", "financiamento"],
+    "breakdown": {
+      "sinal": { "qty": 1, "unit": 12400 },
+      "306090": { "qty": 3, "unit": 6200 },
+      "mensais": { "qty": 44, "unit": 564 },
+      "semestrais": { "qty": 7, "unit": 3543 },
+      "unica": { "qty": 1, "unit": 24800 },
+      "financiamento": { "qty": 1, "unit": 204583 }
+    }
+  },
+  {
+    "id": "ICOON1Q-28M",
+    "name": "ICOON 1Q 28M²",
+    "area": "28M²",
+    "price": 285000,
+    "image": "assets/planta_2.png",
+    "fieldsEditable": ["sinal", "306090", "mensais", "semestrais", "unica", "financiamento"],
+    "breakdown": {
+      "sinal": { "qty": 1, "unit": 11400 },
+      "306090": { "qty": 3, "unit": 5700 },
+      "mensais": { "qty": 44, "unit": 519 },
+      "semestrais": { "qty": 7, "unit": 3258 },
+      "unica": { "qty": 1, "unit": 22800 },
+      "financiamento": { "qty": 1, "unit": 188058 }
+    }
+  },
+  {
+    "id": "ICOON2Q-52M",
+    "name": "ICOON 2Q 52M²",
+    "area": "52M²",
+    "price": 478000,
+    "image": "assets/planta_3.png",
+    "fieldsEditable": ["sinal", "306090", "mensais", "semestrais", "unica", "financiamento"],
+    "breakdown": {
+      "sinal": { "qty": 1, "unit": 14340 },
+      "306090": { "qty": 3, "unit": 7967 },
+      "mensais": { "qty": 44, "unit": 870 },
+      "semestrais": { "qty": 7, "unit": 5463 },
+      "unica": { "qty": 1, "unit": 38240 },
+      "financiamento": { "qty": 1, "unit": 324998 }
+    }
+  },
+  {
+    "id": "ICOON2Q-57M",
+    "name": "ICOON 2Q 57M²",
+    "area": "57M²",
+    "price": 523000,
+    "image": "assets/planta_4.png",
+    "fieldsEditable": ["sinal", "306090", "mensais", "semestrais", "unica", "financiamento"],
+    "breakdown": {
+      "sinal": { "qty": 1, "unit": 15690 },
+      "306090": { "qty": 3, "unit": 8717 },
+      "mensais": { "qty": 44, "unit": 951 },
+      "semestrais": { "qty": 7, "unit": 5978 },
+      "unica": { "qty": 1, "unit": 41840 },
+      "financiamento": { "qty": 1, "unit": 355629 }
+    }
+  },
+  {
+    "id": "ICOON2Q-65M",
+    "name": "ICOON 2Q 65M²",
+    "area": "65M²",
+    "price": 592000,
+    "image": "assets/planta_5.png",
+    "fieldsEditable": ["sinal", "306090", "mensais", "semestrais", "unica", "financiamento"],
+    "breakdown": {
+      "sinal": { "qty": 1, "unit": 17760 },
+      "306090": { "qty": 3, "unit": 9867 },
+      "mensais": { "qty": 44, "unit": 1077 },
+      "semestrais": { "qty": 7, "unit": 6766 },
+      "unica": { "qty": 1, "unit": 47360 },
+      "financiamento": { "qty": 1, "unit": 402529 }
+    }
+  },
+  {
+    "id": "ICOON3Q-72M",
+    "name": "ICOON 3Q 72M²",
+    "area": "72M²",
+    "price": 645000,
+    "image": "assets/planta_6.png",
+    "fieldsEditable": ["sinal", "306090", "mensais", "semestrais", "unica", "financiamento"],
+    "breakdown": {
+      "sinal": { "qty": 1, "unit": 19350 },
+      "306090": { "qty": 3, "unit": 10750 },
+      "mensais": { "qty": 44, "unit": 1100 },
+      "semestrais": { "qty": 7, "unit": 6911 },
+      "unica": { "qty": 1, "unit": 38700 },
+      "financiamento": { "qty": 1, "unit": 457923 }
+    }
+  },
+  {
+    "id": "ICOON3Q-77M",
+    "name": "ICOON 3Q 77M²",
+    "area": "77M²",
+    "price": 679000,
+    "image": "assets/planta_7.png",
+    "fieldsEditable": ["sinal", "306090", "mensais", "semestrais", "unica", "financiamento"],
+    "breakdown": {
+      "sinal": { "qty": 1, "unit": 20370 },
+      "306090": { "qty": 3, "unit": 11317 },
+      "mensais": { "qty": 44, "unit": 1158 },
+      "semestrais": { "qty": 7, "unit": 7275 },
+      "unica": { "qty": 1, "unit": 40740 },
+      "financiamento": { "qty": 1, "unit": 482062 }
+    }
+  },
+  {
+    "id": "ICOON3Q-80M",
+    "name": "ICOON 3Q 80M²",
+    "area": "80M²",
+    "price": 699000,
+    "image": "assets/planta_8.png",
+    "fieldsEditable": ["sinal", "306090", "mensais", "semestrais", "unica", "financiamento"],
+    "breakdown": {
+      "sinal": { "qty": 1, "unit": 20970 },
+      "306090": { "qty": 3, "unit": 11650 },
+      "mensais": { "qty": 44, "unit": 1192 },
+      "semestrais": { "qty": 7, "unit": 7490 },
+      "unica": { "qty": 1, "unit": 41940 },
+      "financiamento": { "qty": 1, "unit": 496262 }
+    }
+  }
+]
