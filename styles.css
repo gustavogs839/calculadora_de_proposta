@@ -158,6 +158,9 @@ p {
   .sim-grid {
     grid-template-columns: 1fr;
   }
+  .sim-summary {
+    position: static;
+  }
 }
 
 .sim-banner {
@@ -266,6 +269,73 @@ p {
 .sim-table tr.adjusted td {
   background: #fff7e6;
   transition: background 0.4s ease;
+}
+
+@media (max-width: 700px) {
+  .sim-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 18px;
+  }
+  .sim-name {
+    font-size: 1.6rem;
+  }
+  .sim-banner-right {
+    width: 100%;
+    height: 110px;
+  }
+
+  /* tabela do simulador vira lista de cartões no mobile */
+  .sim-table thead {
+    display: none;
+  }
+  .sim-table,
+  .sim-table tbody,
+  .sim-table tr,
+  .sim-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  .sim-table tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .sim-table tr:last-child {
+    margin-bottom: 0;
+  }
+  .sim-table td {
+    border-bottom: none;
+    padding: 7px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .sim-table td:first-child {
+    padding-top: 0;
+    padding-bottom: 9px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .sim-table td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-light);
+  }
+  .sim-table td input {
+    width: auto;
+    max-width: 62%;
+  }
 }
 
 label {
@@ -479,5 +549,12 @@ button.danger:hover {
   }
   .model-select {
     flex-wrap: wrap;
+  }
+  .model-select select {
+    flex: 1;
+    min-width: 0;
+  }
+  .sim-name {
+    font-size: 1.35rem;
   }
 }
